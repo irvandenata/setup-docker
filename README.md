@@ -1,4 +1,4 @@
-# Dokumentasi Setup Nginx — BSrE Frontend
+# Dokumentasi Setup Nginx — Frontend
 
 ## Gambaran Arsitektur
 
