@@ -1,0 +1,97 @@
+services:
+  # ─── Main website (nuxt-landing-page) ────────────────────────────────────
+  # Exposes port 3000 publicly. nginx proxies:
+  #   - page routes + assets from landingpage-3.0 → landingpage:80
+  #   - /helpdesk/**                               → helpdesk:80
+  #   - /reservation/**                            → reservation:80
+  landing:
+    build:
+      context: ..
+      dockerfile: setup/Dockerfile
+    image: bsre/nuxt-landing-page:local
+    container_name: bsre-landing
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    environment:
+      APP_RESERVASI:  ${APP_RESERVASI:-http://internal-dev.bsre.go.id/reservasi-service}
+      APP_KERJASAMA:  ${APP_KERJASAMA:-https://internal-dev.bsre.go.id/kerjasama-service}
+      APP_PERSURATAN: ${APP_PERSURATAN:-https://internal-dev.bsre.go.id/servispersuratan}
+      APP_MONITORING: ${APP_MONITORING:-https://internal-dev.bsre.go.id/report-service}
+      APP_WILAYAH:    ${APP_WILAYAH:-https://internal-dev.bsre.go.id/data-wilayah}
+      APP_AMS:        ${APP_AMS:-https://internal-dev.bsre.go.id/ams-core-2}
+      APP_SURVEY:     ${APP_SURVEY:-https://internal-dev.bsre.go.id/survey-service}
+      APP_PUBLIK:     ${APP_PUBLIK:-https://internal-dev.bsre.go.id/publicwebgateway}
+      APP_HELPDESK:   ${APP_HELPDESK:-https://internal-dev.bsre.go.id/crm-web-gateway}
+    depends_on:
+      - landingpage
+      - helpdesk
+      - reservation
+    networks:
+      - bsre-net
+
+  # ─── landingpage-3.0 (Vue CLI SPA, served by nginx) ──────────────────────
+  # Internal only — landing proxies matching routes here (bsre-page-proxy patterns).
+  landingpage:
+    build:
+      context: ..
+      dockerfile: setup/Dockerfile.landingpage
+    image: bsre/landingpage-3.0:local
+    container_name: bsre-landingpage
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - bsre-net
+
+  # ─── helpdesk-nuxt (static SPA at /helpdesk) ─────────────────────────────
+  # Internal only — accessed via landing → /helpdesk/
+  helpdesk:
+    build:
+      context: ..
+      dockerfile: setup/Dockerfile.helpdesk
+    image: bsre/helpdesk-nuxt:local
+    container_name: bsre-helpdesk
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      APP_RESERVASI:  ${APP_RESERVASI:-http://internal-dev.bsre.go.id/reservasi-service}
+      APP_KERJASAMA:  ${APP_KERJASAMA:-https://internal-dev.bsre.go.id/kerjasama-service}
+      APP_PERSURATAN: ${APP_PERSURATAN:-https://internal-dev.bsre.go.id/servispersuratan}
+      APP_MONITORING: ${APP_MONITORING:-https://internal-dev.bsre.go.id/report-service}
+      APP_WILAYAH:    ${APP_WILAYAH:-https://internal-dev.bsre.go.id/data-wilayah}
+      APP_AMS:        ${APP_AMS:-https://internal-dev.bsre.go.id/ams-core-2}
+      APP_SURVEY:     ${APP_SURVEY:-https://internal-dev.bsre.go.id/survey-service}
+      APP_PUBLIK:     ${APP_PUBLIK:-https://internal-dev.bsre.go.id/publicwebgateway}
+      APP_HELPDESK:   ${APP_HELPDESK:-https://internal-dev.bsre.go.id/crm-web-gateway}
+    networks:
+      - bsre-net
+
+  # ─── reservation-nuxt (static SPA at /reservation) ───────────────────────
+  # Internal only — accessed via landing → /reservation/
+  reservation:
+    build:
+      context: ..
+      dockerfile: setup/Dockerfile.reservation
+    image: bsre/reservation-nuxt:local
+    container_name: bsre-reservation
+    restart: unless-stopped
+    expose:
+      - "80"
+    environment:
+      APP_RESERVASI:  ${APP_RESERVASI:-http://internal-dev.bsre.go.id/reservasi-service}
+      APP_KERJASAMA:  ${APP_KERJASAMA:-https://internal-dev.bsre.go.id/kerjasama-service}
+      APP_PERSURATAN: ${APP_PERSURATAN:-https://internal-dev.bsre.go.id/servispersuratan}
+      APP_MONITORING: ${APP_MONITORING:-https://internal-dev.bsre.go.id/report-service}
+      APP_WILAYAH:    ${APP_WILAYAH:-https://internal-dev.bsre.go.id/data-wilayah}
+      APP_AMS:        ${APP_AMS:-https://internal-dev.bsre.go.id/ams-core-2}
+      APP_SURVEY:     ${APP_SURVEY:-https://internal-dev.bsre.go.id/survey-service}
+      APP_PUBLIK:     ${APP_PUBLIK:-https://internal-dev.bsre.go.id/publicwebgateway}
+      APP_HELPDESK:   ${APP_HELPDESK:-https://internal-dev.bsre.go.id/crm-web-gateway}
+    networks:
+      - bsre-net
+
+networks:
+  bsre-net:
+    driver: bridge

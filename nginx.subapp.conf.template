@@ -1,0 +1,231 @@
+# nginx config for helpdesk-nuxt and reservation-nuxt (static SPA at sub-path)
+# This is a template processed by envsubst at container startup.
+# Variables: APP_RESERVASI, APP_KERJASAMA, APP_PERSURATAN, APP_MONITORING,
+#            APP_WILAYAH, APP_AMS, APP_SURVEY, APP_PUBLIK, APP_HELPDESK
+#
+# Each APP_* variable is a full URL including backend path prefix,
+# e.g. APP_HELPDESK=https://internal-dev.bsre.go.id/crm-web-gateway
+#
+# Pattern: strip the location prefix, then proxy_pass to APP_* + remainder.
+# We use `set $proxy_uri` so nginx treats proxy_pass as a literal variable
+# (no built-in URI rewriting), giving us full control over the final URL.
+
+user  nginx;
+worker_processes  auto;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  include       /etc/nginx/mime.types;
+  default_type  application/octet-stream;
+
+  log_format main "$remote_addr - $remote_user [$time_local] '$request' "
+                  "$status $body_bytes_sent '$http_referer' '$http_user_agent'";
+  access_log /var/log/nginx/access.log main;
+
+  sendfile        on;
+  keepalive_timeout 65;
+  client_max_body_size 50M;
+  server_tokens off;
+
+  server {
+    listen 80;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    absolute_redirect off;
+
+    # Required when proxy_pass uses a variable ($proxy_uri) — nginx won't
+    # resolve hostnames at request time without an explicit resolver.
+    resolver 127.0.0.11 valid=30s ipv6=off;
+
+    # ── Strip /helpdesk base from API calls (Nuxt built with base=/helpdesk) ──
+    # Nuxt $fetch with absolute paths like /_tiket/ gets prefixed to
+    # /helpdesk/_tiket/ at runtime. Rewrite strips the base so the API
+    # location blocks below can match normally.
+    location ~ ^/helpdesk(/_tiket/|/api/_tiket/|/_reservation/|/_monitoring/|/_persuratan/|/api/_kerjasama/|/api/persuratan/|/api/wilayah/|/api/ams/|/api/_survey/|/api/_publik/)(.*)$ {
+      rewrite ^/helpdesk(/.*)$ $1 last;
+    }
+
+    # ── /_reservation/** → APP_RESERVASI backend ────────────────────────────
+    location ^~ /_reservation/ {
+      set $suffix $uri$is_args$args;
+      if ($suffix ~ "^/_reservation/(.*)$") { set $suffix /$1; }
+      set $proxy_uri ${APP_RESERVASI}$suffix;
+      proxy_pass         $proxy_uri;
+      proxy_http_version 1.1;
+      proxy_set_header   Host              $proxy_host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+    }
+
+    # ── /api/_kerjasama/** → APP_KERJASAMA backend ──────────────────────────
+    location ^~ /api/_kerjasama/ {
+      set $suffix $uri$is_args$args;
+      if ($suffix ~ "^/api/_kerjasama/(.*)$") { set $suffix /$1; }
+      set $proxy_uri ${APP_KERJASAMA}$suffix;
+      proxy_pass         $proxy_uri;
+      proxy_http_version 1.1;
+      proxy_set_header   Host              $proxy_host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+    }
+
+    # ── /api/persuratan/** → APP_PERSURATAN backend ─────────────────────────
+    location ^~ /api/persuratan/ {
+      set $suffix $uri$is_args$args;
+      if ($suffix ~ "^/api/persuratan/(.*)$") { set $suffix /$1; }
+      set $proxy_uri ${APP_PERSURATAN}$suffix;
+      proxy_pass         $proxy_uri;
+      proxy_http_version 1.1;
+      proxy_set_header   Host              $proxy_host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+    }
+
+    # ── /_persuratan/** → APP_PERSURATAN backend ────────────────────────────
+    location ^~ /_persuratan/ {
+      set $suffix $uri$is_args$args;
+      if ($suffix ~ "^/_persuratan/(.*)$") { set $suffix /$1; }
+      set $proxy_uri ${APP_PERSURATAN}$suffix;
+      proxy_pass         $proxy_uri;
+      proxy_http_version 1.1;
+      proxy_set_header   Host              $proxy_host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+    }
+
+    # ── /_monitoring/** → APP_MONITORING backend ────────────────────────────
+    location ^~ /_monitoring/ {
+      set $suffix $uri$is_args$args;
+      if ($suffix ~ "^/_monitoring/(.*)$") { set $suffix /$1; }
+      set $proxy_uri ${APP_MONITORING}$suffix;
+      proxy_pass         $proxy_uri;
+      proxy_http_version 1.1;
+      proxy_set_header   Host              $proxy_host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+    }
+
+    # ── /api/wilayah/** → APP_WILAYAH backend ───────────────────────────────
+    location ^~ /api/wilayah/ {
+      set $suffix $uri$is_args$args;
+      if ($suffix ~ "^/api/wilayah/(.*)$") { set $suffix /$1; }
+      set $proxy_uri ${APP_WILAYAH}$suffix;
+      proxy_pass         $proxy_uri;
+      proxy_http_version 1.1;
+      proxy_set_header   Host              $proxy_host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+    }
+
+    # ── /api/ams/** → APP_AMS backend ───────────────────────────────────────
+    location ^~ /api/ams/ {
+      set $suffix $uri$is_args$args;
+      if ($suffix ~ "^/api/ams/(.*)$") { set $suffix /$1; }
+      set $proxy_uri ${APP_AMS}$suffix;
+      proxy_pass         $proxy_uri;
+      proxy_http_version 1.1;
+      proxy_set_header   Host              $proxy_host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+    }
+
+    # ── /api/_survey/** → APP_SURVEY backend ────────────────────────────────
+    location ^~ /api/_survey/ {
+      set $suffix $uri$is_args$args;
+      if ($suffix ~ "^/api/_survey/(.*)$") { set $suffix /$1; }
+      set $proxy_uri ${APP_SURVEY}$suffix;
+      proxy_pass         $proxy_uri;
+      proxy_http_version 1.1;
+      proxy_set_header   Host              $proxy_host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+    }
+
+    # ── /api/_publik/** → APP_PUBLIK backend ────────────────────────────────
+    location ^~ /api/_publik/ {
+      set $suffix $uri$is_args$args;
+      if ($suffix ~ "^/api/_publik/(.*)$") { set $suffix /$1; }
+      set $proxy_uri ${APP_PUBLIK}$suffix;
+      proxy_pass         $proxy_uri;
+      proxy_http_version 1.1;
+      proxy_set_header   Host              $proxy_host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+    }
+
+    # ── /_tiket/** → APP_HELPDESK backend ───────────────────────────────────
+    location ^~ /_tiket/ {
+      set $suffix $uri$is_args$args;
+      if ($suffix ~ "^/_tiket/(.*)$") { set $suffix /$1; }
+      set $proxy_uri ${APP_HELPDESK}$suffix;
+      proxy_pass         $proxy_uri;
+      proxy_http_version 1.1;
+      proxy_set_header   Host              $proxy_host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+    }
+
+    # ── /api/_tiket/** → APP_HELPDESK backend ───────────────────────────────
+    location ^~ /api/_tiket/ {
+      set $suffix $uri$is_args$args;
+      if ($suffix ~ "^/api/_tiket/(.*)$") { set $suffix /$1; }
+      set $proxy_uri ${APP_HELPDESK}$suffix;
+      proxy_pass         $proxy_uri;
+      proxy_http_version 1.1;
+      proxy_set_header   Host              $proxy_host;
+      proxy_set_header   X-Real-IP         $remote_addr;
+      proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header   X-Forwarded-Proto $scheme;
+      proxy_ssl_server_name on;
+    }
+
+    # ── Strip /reservation or /helpdesk prefix then re-evaluate the URI ─────
+    location ~ ^/(reservation|helpdesk)(/.+)$ {
+      rewrite ^/(reservation|helpdesk)(/.+)$ $2 last;
+    }
+    location ~ ^/(reservation|helpdesk)/?$ {
+      rewrite ^ / last;
+    }
+
+    # ── Static assets — long cache ───────────────────────────────────────────
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?|ttf|eot|json|map|txt|xml)$ {
+      expires 1y;
+      add_header Cache-Control "public, immutable";
+      try_files $uri =404;
+    }
+
+    # ── SPA fallback ─────────────────────────────────────────────────────────
+    location / {
+      try_files $uri $uri/index.html /index.html;
+    }
+
+    error_page 403 404 /index.html;
+  }
+}
